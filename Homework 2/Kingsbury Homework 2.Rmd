@@ -1,0 +1,150 @@
+---
+title: "Kingsbury Homework 2"
+output: html_notebook
+---
+
+# WMAN 633 QUANTITATIVE ECOLOGY
+
+### Set-up: Import the data and fit a model with OpenBeach as the response and an interaction between Year and BeachID.
+```{r}
+beach <- read.csv("beach.csv")
+fit <- lm(OpenBeach ~ Year * BeachID, data = beach)
+
+```
+
+### Question 1
+#### Calculate the residuals. Use the summary() function applied to your numeric vector of residuals to
+#### verify that this matches the Residuals: quantiles reported from the summary of your fitted model.
+#### Plot a histogram of your residuals. Do they appear reasonably Gaussian?
+```{r}
+
+#Inspect summary of the model and look at the Residuals
+summary(fit)
+
+#Extract the fitted values from the model
+Expected_Values <- fitted.values(fit)
+Expected_Values
+
+#Calculate the residuals, Residuals = "Observed values" - "Expected Values"
+Beach_Res <- beach$OpenBeach - Expected_Values
+Beach_Res
+
+#Compare summary of calculated Residuals with the summary of the model
+summary(Beach_Res)
+
+#Plot the resiudals and inspect for normality
+hist(Beach_Res, xlab = "beach model residuals", main = NULL)
+```
+#### The distribution of the residuals in the histogram appears to closely resememble a normal distribution curve. I would feel comofortable assuming the data is normal on visual inspection alone.
+
+### Question 2
+#### Calculate test statistics for your regression coefficients. Verify by comparing to test statistics reported from model output.
+```{r}
+#Calculate Test Statistics for ALL coeficients
+
+# Intercept
+t_int <- coef(fit)[1] / summary(fit)[['coefficients']]['(Intercept)', 'Std. Error']
+
+# Years
+t_y <- coef(fit)[2] / summary(fit)[['coefficients']]['Year', 'Std. Error']
+
+#BeachIDB
+t_IDB <- coef(fit)[3] / summary(fit)[['coefficients']]['BeachIDB', 'Std. Error']
+
+#BeachIDC
+t_IDC <- coef(fit)[4] / summary(fit)[['coefficients']]['BeachIDC', 'Std. Error']
+
+#Year:BeachIDB
+t_YearIDB <- coef(fit)[5] / summary(fit)[['coefficients']]['Year:BeachIDB', 'Std. Error']
+
+#Year:BeachIDC
+t_YearIDC <- coef(fit)[6] / summary(fit)[['coefficients']]['Year:BeachIDC', 'Std. Error']
+
+#final test-statistics
+tstats <- data.frame(t_int, t_y, t_IDB, t_IDC, t_YearIDB, t_YearIDC)
+tstats
+```
+
+
+
+### Question 3
+#### Calculate p-values for your regression coefficients. Verify by comparing to p-values reported from model output. What are the associated null hypotheses? Do you reject or fail to reject these null hypotheses?
+
+```{r}
+
+#Degrees of freedom is "n-k" where is k is the number of regression coefficients and n is the number of samples or observations
+k <- 6
+n <- 62
+df <- n-k
+df
+
+#Intercept P-Value calculation
+int_pval <- pt(-1 * abs(t_int), df = 56) + (1 - pt(abs(t_int), df = 56))
+
+#Year P-value calculation
+year_pval <- pt(-1 * abs(t_y), df = 56) + (1 - pt(abs(t_y), df = 56))
+
+#BeachIDB P-value calculation
+BeachB_pval <- pt(-1 * abs(t_IDB), df = 56) + (1 - pt(abs(t_IDB), df = 56))
+
+#BeachIDC P-value calculation
+BeachC_pval <- pt(-1 * abs(t_IDC), df = 56) + (1 - pt(abs(t_IDC), df = 56))
+
+#Year:BeachIDB P-value calculation
+YearBeachB_pval <- pt(-1 * abs(t_YearIDB), df = 56) + (1 - pt(abs(t_YearIDB), df = 56))
+
+#Year:BeachIDC P-value calculation
+YearBeachC_pval <- pt(-1 * abs(t_YearIDC), df = 56) + (1 - pt(abs(t_YearIDC), df = 56))
+
+#Combine all P-values for easy comparison
+Beach_Pval <- data.frame(int_pval, year_pval, BeachB_pval, BeachC_pval, YearBeachB_pval, YearBeachC_pval)
+Beach_Pval
+```
+#### The associated null hypotheses for all of these coefficients is B1-6 = 0. We reject all of the null hypotheses with an assumed alpha-level = 0.05
+
+### Question 4
+#### Select a single regression coefficient (your choice) and devise a null hypothesis that is different from the default in lm(). Report the test statistics, your p-value, and whether you reject or fail to reject your null hypothesis.
+
+#### The coefficient I am interested in testing is the BeachIDB coefficient. My new null hypothesis is B2 = -1000.
+
+```{r}
+
+#calculate test statistic with Ho: B2 = -1000
+t_IDBnew <- (coef(fit)[3]- (-1000)) / summary(fit)[['coefficients']]['BeachIDB', 'Std. Error']
+t_IDBnew
+
+#P-value
+BeachB_pvalnew <- pt(-1 * abs(t_IDBnew), df = 56) + (1 - pt(abs(t_IDBnew), df = 56))
+BeachB_pvalnew
+```
+#### Based on the null hypothesis and an alpha-level = 0.05 I would reject the null hypothesis: B2 = -1000.
+
+### Question 5
+#### Interpret output of your fitted model. Tell me how beach area does (or does not change) through time at each of the 3 beaches.
+
+##### Note: The original beach.csv data set used years (1992, 1993, 1994, etc.) as a variable but R does not read these values as years but as raw integers. This creates a model output that is difficult to interpret and relate to open beach hectares. A second version of the dataset has been created where years are now listed (1, 2, 3, etc.) and this makes the model much more readable for the average person (and me).
+
+```{r}
+
+beach2 <- read.csv("beach2.csv")
+head(beach2)
+
+#Model with new year column
+fit2 <- lm(OpenBeach ~ Year * BeachID, data = beach2)
+summary(fit2)
+```
+#### Based on the model above open beach area at all 3 beaches significantly changed through time. Initial investigation of the **RESIDUALS** shows that the median is close to zero and the min and max are roughly equidistant from the median. The quartiles are also equidistant from the median and this is a rough indicator that the residuals are normally distributed. All 6 regression coefficients returned p-values significantly smaller than 0.05 and thus all coefficients are identified as rejecting the null hypothesis, Ho: b0-b5 = 0.
+
+#### The **intercept coefficient** relates to the average area across all beaches at year 0. A significant p-value for this coefficient is a good indicator that our p-value is in the appropriate location.
+
+#### The **Year coefficient** indicates that per year 18.4 hectares of open beach area are lost across all beaches. The p-value is signficantly less than 0.05 suggesting that there is strong evidence for the loss of open beach area each year.
+
+#### **BeachIDB coefficient** posseses a large negative value indicating that BeachB is on average 279.8 hectares smaller than BeachA and Beach C. The small p-value of less than 0.05 indicates that this difference is significant.
+
+#### **BeachIDC coefficient** is a negative value indicating that BeachC is on average 162.8 hectares smaller than BeachA and BeachB. the small p-value of less than 0.05 indicates that there is a signficant difference in beach sizes.
+
+#### The **Year:BeachB coefficient** is a positive value showing the effect of time has on open beach area on BeachB in reducing open area beach loss 17 hectares per year. The p-value is significant which shows that the effects of BeachB on yearly open beach loss is significant.
+
+#### the **Year:BeachC coefficient** has a positive value showing that time interacts with BeachC to reduce yearly open beach loss by 14.4 hectares per year. The p-value is less than 0.05 which means that this the interaction between BeachC and years is signficant.
+
+

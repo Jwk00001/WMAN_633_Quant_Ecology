@@ -1,0 +1,108 @@
+---
+title: "Kingsbury Exam 1"
+author: "Joe Kingsbury"
+output: html_notebook
+---
+
+### **Question 1**
+Import this dataset into R and inspect the first several rows of your data
+```{r}
+data <- read.csv("Exam 1 Data.csv")
+head(data)
+```
+Note: I could not get the code to appear for some reason on the html side of this so I have written it down below.
+
+data <- read.csv("Exam 1 Data.csv)
+
+head(data)
+
+
+### **Question 2**
+Fit a linear model that assumes your response is a function of x1, x2, and x3. Include an interaction between x1 and x2 only (i.e., do not include an interaction between your categorical variables and any other variables).
+```{r}
+fit <- lm(y ~ x1 + x2 + x3 + x1 * x2, data = data)
+summary(fit)
+```
+
+
+### **Question 3**
+Interpret the effect of variable x1 when x2 = -1
+
+start by writing out my model to help visualize it
+
+Linear model looks like -> y = B0 + B1x1 + B2x2 + B3x3b + B4x3c + B5(x1x2)
+
+Collect all my x1s = y = b1x1 + b5(x1x2)
+```{r}
+betas <- coef(fit)
+Q3 <- betas[2] + betas[5] * -1
+Q3
+```
+
+### **Question 4**
+Interpret the effect of variable x1 when x2 = 1
+```{r}
+betas <- coef(fit)
+Q4 <- betas[2] + betas[5] * 1
+Q4
+```
+
+### **Question 5**
+Interpret the effect of variable x3
+```{r}
+ya <- betas[1] + betas [2] + betas [3] + betas[6] #A = 0 / B = 0 / C = 0 
+yb <- betas[1] + betas[2] + betas[3] + betas[4] + betas[6] #A = 0 / B = 1 / C = 0
+yc <- betas[1] + betas[2] + betas[3] + betas[5] + betas[6] #A = 0 / B = 0 / C = 1
+
+#Diffence between a and b
+ya - yb
+#Difference between a and c
+ya - yc
+```
+
+### **Question 6**
+Describe how R codes the categorical variable x3. Demonstrate by reporting the first 5 values of
+variables derived from x3
+```{r}
+cbind(data$x3[1:5],
+ifelse(data$x3 == 'b', 1, 0)[1:5],
+ifelse(data$x3 == 'c', 1, 0)[1:5])
+```
+R creates dummy variables for categorical variables based on k-1. In this model we have 3 variables so k=3 and R has coded 2 dummy variables for 'b' and 'c'. R codes the categorical variable 'a' as a refernce leaving 'b' and 'c' to be coded as 1,0 or 0,1. When factor level 'b' is called upon it is coded as a 1 and included in the model and the same goes factor level 'c'.
+
+### **Question 7**
+Derive the test statistic and p-value associated with the interaction between x1 and x2. What is the null hypothesis assumed by the "lm()" function? Do we reject or fail to reject this null hypothesis?
+Defend your answer.
+```{r}
+#Test Statistic
+ts_x1x2 <- coef(fit)[6] / summary(fit)[['coefficients']]['x1:x2', 'Std. Error']
+ts_x1x2
+
+#P-value, df = 94
+pt(-1 * abs(ts_x1x2), df = 94) + (1 - pt(abs(ts_x1x2), df = 94)) 
+```
+The lm() function assumes a null hypothesis of 0, Ho: Bi = 0. In this case the p-value is very, very, very close to 0.1. With this value in mind and taking into consideration that it barely meets an alpha error of 0.1 I would accept the null hypothesis having set my acceptable alpha level to 0.05. I say this because I have not read many papers that deem a statistical p-value = 0.1 as being significant. I am also considering the fact that the majority of the other variables have very small p-values, <0.02. Because of these small p-values on the other coefficients I am inclined to believe they have a more significant imapct than the x1:x2 interaction.
+
+### **Question 8**
+assume you have the following realizations of random variable Y :
+y = (3, 8, 7). Further assume realizations of the random variable Y are Gaussian distributed:
+y -> Gaussian(μ, o`2). Fix 2 = 1 and μ = 8, and evaluate the probability density at each of your 3 realizations.
+```{r}
+y8 <- c(3,8,7)
+dnorm(y8,8, 2)
+```
+
+### **Question 9**
+What is a type I error? What is a p-value? How are the two quantities related?
+
+Type I error: The odds of falsely rejecting a null hypothesis that is actually true. Also known at alpha-error. For example if I set my signficance threshold to p < 0.01 then that implies there is a type I error probability of 0.01.
+
+P-value: The probability of observing a more extreme value of a test statistic, under the assumptions of the null hypothesis. P-values are calculated when comparing the value of the test statistic to it's theoretical distribution.
+
+Type I error and P-values go hand in hand. Type I error sets an arbitrary mark for when the p-value tells us to accept or reject the null hypothesis. If the p-value is less than our arbitrary type I error rate then you can reasonably claim a variable or set of variables in your data are significant in describing the pattern being observed.
+
+### **Question 10**
+What is a fundamental assumption we must make to derive inference about regression coefficients of a linear model?
+
+A key fundamental assumption when it comes to deriving inferences from regression coefficients is that the residuals that were used to calculate the coefficients are normally distributed. If they are not normally distributed it creates problems regarding the least squares method which helps us find the line of best fit.
+

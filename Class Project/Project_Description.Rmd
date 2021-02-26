@@ -1,0 +1,33 @@
+---
+title: "WMAN 633 Project Description"
+author: "Joe Kingsbury"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+### **Description of the study system and experimental design**
+
+The study system is focused on 3 wastewater treatment plants (WWTP) in the state of West Virginia along the Buckhannon, Tygart Valley, and West Fork Rivers. The treatment plants are located in the following cities: Buckhannon, Elkins, and Weston. The three rivers in the study system are similar in flow regimes and fish community assemblages which is why they were selected. 
+
+The experimental design for this study involved collecting 1 Liter water samples of influent (raw sewage), effluent (treated water), an upstream sample, and a downstream sample at each WWTP once per month. The upstream and downstream collection points are 150 meters away from the WWTP discharge pipe. Flow (cfs) data was taken from the nearest USGS stream gauge. Water quality data was obtained using a YSI Pro Series handheld probe. Water quality measurements were not obtained from the influent due to concerns of potential exposure to COVID-19. Influent samples had to be treated as biohazardous material and handled with extreme caution. Samples were collected over 4 months, August-November 2020. We tested for 4 different pharmaceuticals using liquid chromatography with tandem mass spectrometry (LC-MS/MS). In total 48 water samples were collected along with 36 water quality readings.
+
+### **List of questions for this data**
+
+1) Is there any relationship between water quality measurements (cfs, cond., temperature, pH) and pharmaceutical concentrations?
+2) How does the upstream concentrations in combination with the effluent concentrations relate to the downstream concentration?
+3) Is influent concentration a good predictor for the effluent and downstream concentration?
+4) Is it possible to plug many of these variables into a linear model to create a predicted downstream concentration?
+
+### **Data Description**
+
+The data is easily broken down between pharmaceutical concentrations and water quality data. The **response** variables are the pharmaceutical concentrations and the water quality data is the **predictor** variables. However it could be argued that since the concentration data is a continuous variable and has a spatial component it can be used as a response or predictor variable depending on the application when comparing collection sites or concentration amounts.
+
+### **Unique and interesting data**
+
+The pharmaceutical concentrations are reported in micrograms per milliter (ug/ml). However, even with state of the art mass spectrometry equipment it is difficult to accurately quantify concentrations at exceedingly low values. The lab sometimes returns a concentration result as <LOQ (Limit of Quantification) which indicated that while a peak was observed by the computer it was below the quantification curve limit. This value is replaced via the equation: "LOQ/sqrt(2)". LOQ is provided in personal documentation with the lab and varies from pharmaceutical to pharmaceutical. This equation is also used over others because it balances simplicity while still taking into account some of the variance.
+
+Another point of interest is that this dataset is part of a pilot study that will eventually be tied to fish condition and analyte detection in fish tissue. The goal is to use this data set to justify a larger study down the road to sample entire systems over longer periods of time.
+
+  

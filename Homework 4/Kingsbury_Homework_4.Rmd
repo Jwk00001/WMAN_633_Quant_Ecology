@@ -1,0 +1,109 @@
+---
+title: "Kingsbury_Homework_4"
+author: "Joe Kingsbury"
+date: "3/17/2021"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+### **Question 1**
+Fit a Poisson regression model that assumes expected count is an interactive function of variables x1 and x2.
+
+```{r}
+dat <- read.csv("Homework 4 Data.csv")
+head(dat)
+
+fit <- glm(y ~ x1 * x2, family = poisson, data = dat)
+summary(fit)
+```
+
+
+### **Question 2**
+Interpret the effect of variable x1 on the expected count when x2 is fixed at level "b". Verify your interpretation in R.
+
+```{r}
+betas <- coef(fit)
+y_1 <- betas[1] + betas[2] * 1 + betas[3] + betas[4] * 1
+y_2 <- betas[1] + betas[2] * 2 + betas[3] + betas[4] * 2
+exp(y_2) / exp(y_1)
+exp(betas[2] + betas[4])
+(exp(betas[2] + betas[4]) - 1) * 100
+```
+The expected count of Y increased by %46.09 for each single unit increase in x1 when taking into account x2 = b.
+
+### **Question 3**
+Interpret the effect of variable x2 on the expected count when x1 is fixed at 1. Verify your interpretation in R.
+
+```{r}
+y_a <- betas[1] + betas[2] * 1 
+y_b <- betas[1] + betas[2] * 1 + betas[3] + betas[4] * 1
+log(exp(y_b) / exp(y_a))
+betas[3] + betas[4]
+(exp(betas[3] + betas[4]) -1) * 100
+```
+When x1 is held at 1 there is a %43.35 difference between the expected count of y when comparing category a and category b.
+
+### **Question 4**
+Predict the expected count, 95% confidence intervals, over the observed range of values of x1, assuming x2 is fixed at level "b".
+
+```{r}
+#Create a new dataframe of predicted values
+data2 <- data.frame(
+x1 = seq(min(dat$x1), max(dat$x1), length.out = 100),
+x2 = factor(x = rep('b', times = 100),
+levels = c('a','b')))
+head(data2)
+
+prd1 <- predict.glm(object = fit, newdata = data2, type = 'link', se.fit = T)
+low <- exp(prd1$fit - qnorm(0.975) * prd1$se.fit)
+high <- exp(prd1$fit + qnorm(0.975) * prd1$se.fit)
+
+plot(y = exp(prd1$fit), x = data2$x1, xlab = 'x1',
+  ylab = 'Expected count', cex.axis = 1.5, cex.lab = 1.5,
+  ylim = c(min(low), max(high)), type = 'l')
+  lines(x = data2$x1, y = low, lty = 2)
+  lines(x = data2$x1, y = high, lty = 2)
+```
+
+
+### **Question 5**
+Predict the expected count, 95% confidence intervals, of levels "a" and "b", assuming x1 is fixed at it’s mean.
+
+```{r}
+#Predicted count of level "a" with x1 fixed at it's mean
+y_a_prd <- betas[1] + betas[2] * mean(dat$x1)
+exp(y_a_prd)
+
+#Predicted count of level "b" with x1 fixed at it's mean
+y_b_prd <- betas[1] + betas[2] * mean(dat$x1) + betas[3] + betas[4] * mean(dat$x1)
+exp(y_b_prd)
+
+```
+```{r}
+#Create a new datafram with x1 at it's mean and level a and b present
+data3 <- data.frame(
+  x1 = rep(mean(dat$x1), times = 2),
+  x2 = c('a', 'b'))
+
+y_prd <- predict.glm(object = fit, newdata = data3, type = 'link', se.fit = T )
+y_low <- exp(y_prd$fit - qnorm(0.975) * y_prd$se.fit)
+y_high <- exp(y_prd$fit + qnorm(0.975) * y_prd$se.fit)
+
+```
+
+
+Confidence Interval for "a"
+```{r}
+Name <- c("Lower Limit", "Upper Limit")
+aConfidenceInterval <- cbind.data.frame(y_low[1:1], y_high[1:1])
+names(aConfidenceInterval) <- Name
+aConfidenceInterval
+```
+
+Confidence Interval for "b"
+```{r}
+bConfidenceInterval <- cbind.data.frame(y_low[2:2], y_high[2:2])
+names(bConfidenceInterval) <- Name
+bConfidenceInterval
+```

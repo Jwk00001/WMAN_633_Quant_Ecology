@@ -1,0 +1,118 @@
+---
+title: "WMAN 633 Exam 2"
+author: "Joe Kingsbury"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+## **Question 1**
+Import this dataset into R and inspect the first several rows of your data
+
+```{r}
+setwd(choose.dir())
+exmdat <- read.csv("Exam 2 Data.csv")
+head(exmdat)
+```
+
+## **Question 2**
+Fit a Poisson model that assumes your response is a function of x1, x2, and x3. Include an interaction between x1 and x2 only (i.e., do not include an interaction between your categorical variables and any other variables).
+
+```{r}
+fit <- glm(y ~ x1 * x2 + x3, family = poisson, data = exmdat)
+summary(fit)
+```
+
+## **Question 3**
+Interpret the effect of variable x1 when x2 = -1
+
+```{r}
+b <- coef(fit)
+
+b[2] + b[6] * -1
+```
+The log expected count decreases by -0.746 for each 1-unit increase in x1 when x2 = -1
+
+## **Question 4**
+Plot expected counts ±90% confidence intervals over the observed range of variable x1. Assume variable when x2 = -1 and category "a"
+
+```{r}
+data2 <- data.frame(
+x1 = seq(from = min(exmdat$x1), to = max(exmdat$x1),length.out = 100),
+x2 = -1,
+x3 = factor('a', levels = c('a','b','c')))
+        
+head(data2)
+
+prd1 <- predict.glm(object = fit, newdata = data2, se.fit = T)
+low <- exp(prd1$fit - qnorm(0.95) * prd1$se.fit)
+high <- exp(prd1$fit + qnorm(0.95) * prd1$se.fit)
+
+plot(y = exp(prd1$fit), x = data2$x1, xlab = 'x1',
+  ylab = 'Expected count', cex.axis = 1.5, cex.lab = 1.5,
+  ylim = c(min(low), max(high)), type = 'l')
+  lines(x = data2$x1, y = low, lty = 2)
+  lines(x = data2$x1, y = high, lty = 2)
+```
+
+## **Question 5**
+Interpret the effect of variable x3
+
+```{r}
+summary(fit)
+```
+The difference in the log expected count between 'a' and 'b' is 0.38 and the difference between 'a' and 'c' for the expected count is -0.88.
+
+## **Question 6**
+Use contrasts to evaluate the null hypothesis that the difference in log expected count between levels "b" and "c" = 0. Fix x1 and x2 at their means
+
+```{r}
+library(multcomp) #For the glht function and hypothesis test
+
+b[5] - b[4]
+
+#Constrast Matrix
+
+x <- matrix(c(0, mean(exmdat$x1), mean(exmdat$x2), -1, 1, ((mean(exmdat$x1) * mean(exmdat$x2)) )), nrow = 1)
+x
+
+cntr <- glht(model = fit, linfct = x)
+summary(cntr, test = adjusted('none'))
+```
+When x1 and x2 are set at their means the 1-unit change in log expected count between 'b' and 'c' is significantly different from 0. The conclused is bason on the very small p-value and we reject the null hypothesis based on this value.
+
+## **Question 7**
+Derive the test statistic and p-value associated with the interaction between x1 and x2. What is the null hypothesis? Do we reject or fail to reject this null hypothesis? Defend your answer.
+
+```{r}
+#Test Statistic
+ts <- b[6] / summary(fit)[['coefficients']]['x1:x2','Std. Error']
+ts
+
+#P-value
+pnorm(-1 * abs(ts)) * 2
+```
+The null hypothesis is b5 = 0. We reject the null hypothesis based on a very small p-vlaue of 1.98e-08. What this means is that there is sufficient evidence that the effect of x1 is dependent on the level of x2.
+
+## **Question 8**
+assume you have the following realizations of random variable Y : y = (1, 0)
+Further assume realizations of the random variable Y are Bernoulli distributed: y ∼ Bernoulli(p).
+What is the probability of observing each of these random variables assuming the log odds of success = -2?
+
+```{r}
+p <- plogis(-2)
+x_1 <- c(1,0)
+dbinom(x_1, size = 1, p = p)
+```
+
+## **Question 9**
+What is the "support" of a Bernoulli random variable? What are the acceptable values of it’s sole parameter? To which quantity do we apply a link function, and why do we do this? What is the principle link function we use in binomial (i.e., logistic) regression, and what it it’s inverse function?
+
+**Answer** The "support" of a Bernoulli random variables are the real numbers 0 and 1 representing success or failure. A link function is applied to the parameters which allows us to map things like temperautre, cloud cover, precipitation, etc to an unconstrained number line. The principle link function we use in binomial is logit link (logistic). The inverse function of logit link is "plogis()" which takes a an unconstrained vector and squishes it between 0 and 1.
+
+## **Question 10**
+What is a fundamental assumption we make to derive inference when comparing two levels of a
+categorical random variable?
+
+**Answer** The fundamental assumption we make when deriving inferences while comparing two levels of a categorical variable is that linear combinations of Gaussian random variables are themselves random variables. This assumption enables us to perform a hypothesis test.

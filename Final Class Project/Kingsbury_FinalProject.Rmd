@@ -1,0 +1,488 @@
+---
+title: "Statin and Beta-blocking Agents in West Virginia Surface Waters"
+author: "Joe Kingsbury"
+date: "April 9, 2021"
+output:
+  pdf_document:
+header-includes:
+- \usepackage{setspace}
+- \doublespacing
+- \usepackage{lineno}
+- \linenumbers
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+---
+
+\newpage
+**KEYWORDS** beta-blockers, linear regression, pharmaceuticals, statins, water quality, waste water treatment plant.
+
+Pharmaceutical pollution is a growing concern regarding the potential impacts it might have on aquatic communities. Thus, it is important to understand if there are ways to predict the environemental concentration of pharmaceutical residues and their active metabolites. With this in mind there are several questions we wish to try and answer regarding pharmaceuticals concentrations in the environment. Are traditional water quality variables (tempterature, flow, conductivity, etc.) strong predictors of the environmental concentratiosn of statins and beta-blockers? Are there significant differences between the various sampling positions at each site and are there differences in concentrations between cities?
+
+# **STUDY AREA**
+
+Surface water grab samples were collected in 3 separate river systems, the Buckhannon, the West Fork, and the Tygart Valley River. All three river systems possess some kind of flow control mechanism and experience similar flow regimes. More specifically, the sampling locations were located in the West Virginia cities of Buckhannon, Weston, and Elkins (Figure 1). Each city has a primary wastewater treatment plant(WWTP) that handles wastewater from households, hospitals, and other various industrial sources.
+
+# **METHODS**
+
+## **Experimental Design**
+Surface water grab samples and water quality readings were collected on a monthly basis from August-November 2020. Surface water samples were collected from the WWTP influent (raw sewage), the WWTP effluent (treated water), 150m upstream of the WWTP discharge pipe, and 150m downstream of the discharge pipe. Water quality measurements were taken at the upstream collection, downstream collection, and effluent discharge area (Figure 2). A total of 48 grab samples (N = 48) and a total of 36 water quality readings were taken (N = 36). Water quality was not recorded for the influent due to COVID-19 safety concerns.
+
+## **Statisical Methods**
+In order to answer all of the previously mentioned research questions a series of linear models were used under the assumption that the environmental concentrations of all 4 pharmaceuticals are Guassian random variables:
+$$ y_{ator}, \ y_{simv}, \ y_{meto}, \ y_{carv} \sim \sf {Gaussian}(\mu, \ \sigma^2) $$
+The residuals for the pharmaceutical concentrations is also assumed to be a Gaussian distribution:
+$$ \epsilon_{pharm} \sim (0, \ \sigma^2)$$
+
+## **Water Quality Estimators**
+We recorded several types of water quality measurements: flow(cfs), temperature(C°), conductivity (µS/cm), Total Dissolved Solids (TDS, mg/L), and pH. The month was also recorded each time samples were collected. The goal was to use see if there is a relationship between water quality parmaters and pharmaceutical concentrations. With this in mind the pharmaceutical concentrations were the response variable and the water quality measurements were the predictor variables with the assumption that the data was normally distributed and thus we used the following Gaussian linear model:
+
+$$ y_{pharm} = \beta_0 +  \beta_{month} + \beta_{cfs} + \beta_{temperature} + \beta_{conductivity} + \beta_{TDS} + \beta_{pH} + \epsilon_{pharm}$$
+This initial model was treated as a starting point to include all parameters but there was no guarantee it was the model of best fit and thus multiple models with fewer parameters than this one were tested. The **$\beta_{month}$** coefficient was treated as a categorical variable to include the months of August, September, October and November. The other vairalbes in the linear equation are all continuous variables. From here environmental variables were removed 1 at a time to create multiple models for Second-order Akaike Information Criteria ($\sf AICc$) testing. Second order was chosen because the data set is small. Only models with an ($AIC\Delta\le2$)  were further evaluated for best fit model. If multiple models met this threshold then they were further evualuated by their respective $\sf AICc$ weight and the model with the greatetest $\sf AICc$ weight was chosen. A model was selected for each of the 4 pharmaceuticals resulting in 4 separate linear models. Coefficients for all models were noted as signficiant if $\alpha\le$ 0.05 after performing a Student's t-test. All models were generated using base R and the linear model function. 
+
+```{r Environmental Models, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+#These are thE packages I like to use when dealing with data frames and xlsx files
+library(tidyverse) #package to manipulate dataframes
+library(readxl) #package to read in xlsx files
+library(AICcmodavg) #package to run AIC analysis
+#Set your working directory wherever you have placed the project folder, setwd(choose.dir())
+
+envdat <- read_excel("Pharmaceutical data.xlsx", #This code will run it all for you
+                     sheet = "Environmental Variable Model", 
+                     col_types = c("text", "text", "text", 
+                                   "numeric", "numeric", "numeric", 
+                                   "numeric", "numeric", "numeric", 
+                                   "numeric", "numeric", "numeric"))
+
+head(envdat) #Inspect the first 5 rows to confirm it pulled the correct data
+
+#Using a linear model with guassian resdiuals to look at environmental relationships to pharmaceutical concentrations
+#Use AICc to determine which model is the best fit for predicting concentrations
+
+#This will look like a lot but each pharmaceutical concentration needed 11 models and with 4 pharmaceuticals that creates 44 models for evaluation. They are simple and will run quickly.
+
+#Note not every single combination was tested and this was to save time and be more proof of concept for the combinations that really interest my research.
+
+#Simvastatin
+Simvfit1 <- lm(Simvastatin ~ Month + cfs + Temperature + Conductivity + TDS + pH, data = envdat)
+Simvfit2 <- lm(Simvastatin ~ Month + cfs + Temperature + Conductivity + TDS, data = envdat)
+Simvfit3 <- lm(Simvastatin ~ Month + cfs + Temperature + Conductivity, data = envdat)
+Simvfit4 <- lm(Simvastatin ~ Month + cfs + Temperature, data = envdat)
+Simvfit5 <- lm(Simvastatin ~ cfs + Temperature, data = envdat)
+Simvfit6 <- lm(Simvastatin ~ Month + cfs + Temperature + TDS, data = envdat)
+Simvfit7 <- lm(Simvastatin ~ cfs, data = envdat)
+Simvfit8 <- lm(Simvastatin ~ Month, data = envdat)
+Simvfit9 <- lm(Simvastatin ~ Temperature, data = envdat)
+Simvfit10 <- lm(Simvastatin ~ Conductivity, data = envdat)
+Simvfit11 <- lm(Simvastatin ~ cfs + Temperature + Conductivity, data = envdat)
+simv_cand.set <- list(M1 = Simvfit1, M2 = Simvfit2, M3 = Simvfit3, M4 = Simvfit4, M5 = Simvfit5, M6 = Simvfit6, M7 = Simvfit7
+                      ,M8 = Simvfit8, M9 = Simvfit9, M10 = Simvfit10, m11 = Simvfit11)
+
+simv_envmods <- aictab(cand.set = simv_cand.set, second.ord = T)
+simv_envmods
+
+#Atorvostatin
+Atorfit1 <- lm(Atorvostatin ~ Month + cfs + Temperature + Conductivity + TDS + pH, data = envdat)
+Atorfit2 <- lm(Atorvostatin ~ Month + cfs + Temperature + Conductivity + TDS, data = envdat)
+Atorfit3 <- lm(Atorvostatin ~ Month + cfs + Temperature + Conductivity, data = envdat)
+Atorfit4 <- lm(Atorvostatin ~ Month + cfs + Temperature, data = envdat)
+Atorfit5 <- lm(Atorvostatin ~ cfs + Temperature, data = envdat)
+Atorfit6 <- lm(Atorvostatin ~ Month + cfs + Temperature + TDS, data = envdat)
+Atorfit7 <- lm(Atorvostatin ~ cfs, data = envdat)
+Atorfit8 <- lm(Atorvostatin ~ Month, data = envdat)
+Atorfit9 <- lm(Atorvostatin ~ Temperature, data = envdat)
+Atorfit10 <- lm(Atorvostatin ~ Conductivity, data = envdat)
+Atorfit11 <- lm(Atorvostatin ~ cfs + Temperature + Conductivity, data = envdat)
+ator_cand.set <- list(M1 = Atorfit1, M2 = Atorfit2, M3 = Atorfit3, M4 = Atorfit4, M5 = Atorfit5, M6 = Atorfit6, M7 = Atorfit7
+                      ,M8 = Atorfit8, M9 = Atorfit9, M10 = Atorfit10, M11 = Atorfit11)
+
+ator_envmods <- aictab(cand.set = ator_cand.set, second.ord = T)
+ator_envmods
+
+summary(Atorfit9)
+
+#Carvedilol
+Carvfit1 <- lm(Carvedilol ~ Month + cfs + Temperature + Conductivity + TDS + pH, data = envdat)
+Carvfit2 <- lm(Carvedilol ~ Month + cfs + Temperature + Conductivity + TDS, data = envdat)
+Carvfit3 <- lm(Carvedilol ~ Month + cfs + Temperature + Conductivity, data = envdat)
+Carvfit4 <- lm(Carvedilol ~ Month + cfs + Temperature, data = envdat)
+Carvfit5 <- lm(Carvedilol ~ cfs + Temperature, data = envdat)
+Carvfit6 <- lm(Carvedilol ~ Month + cfs + Temperature + TDS, data = envdat)
+Carvfit7 <- lm(Carvedilol ~ cfs, data = envdat)
+Carvfit8 <- lm(Carvedilol ~ Month, data = envdat)
+Carvfit9 <- lm(Carvedilol ~ Temperature, data = envdat)
+Carvfit10 <- lm(Carvedilol ~ Conductivity, data = envdat)
+Carvfit11 <- lm(Carvedilol ~ cfs + Temperature + Conductivity, data = envdat)
+carv_cand.set <- list(M1 = Carvfit1, M2 = Carvfit2, M3 = Carvfit3, M4 = Carvfit4, M5 = Carvfit5, M6 = Carvfit6, M7 = Carvfit7
+                      ,M8 = Carvfit8, M9 = Carvfit9, M10 = Carvfit10, M11 = Carvfit11)
+
+carv_envmods <- aictab(cand.set = carv_cand.set, second.ord = T)
+carv_envmods
+summary(Carvfit5)
+
+#Metoprolol
+Metofit1 <- lm(Metoprolol ~ Month + cfs + Temperature + Conductivity + TDS + pH, data = envdat)
+Metofit2 <- lm(Metoprolol ~ Month + cfs + Temperature + Conductivity + TDS, data = envdat)
+Metofit3 <- lm(Metoprolol ~ Month + cfs + Temperature + Conductivity, data = envdat)
+Metofit4 <- lm(Metoprolol ~ Month + cfs + Temperature, data = envdat)
+Metofit5 <- lm(Metoprolol ~ cfs + Temperature, data = envdat)
+Metofit6 <- lm(Metoprolol ~ Month + cfs + Temperature + TDS, data = envdat)
+Metofit7 <- lm(Metoprolol ~ cfs, data = envdat)
+Metofit8 <- lm(Metoprolol ~ Month, data = envdat)
+Metofit9 <- lm(Metoprolol ~ Temperature, data = envdat)
+Metofit10 <- lm(Metoprolol ~ Conductivity, data = envdat)
+Metofit11 <- lm(Metoprolol ~ cfs + Temperature + Conductivity, data = envdat)
+meto_cand.set <- list(M1 = Metofit1, M2 = Metofit2, M3 = Metofit3, M4 = Metofit4, M5 = Metofit5, M6 = Metofit6, M7 = Metofit7
+                      ,M8 = Metofit8, M9 = Metofit9, M10 = Metofit10, M11 = Metofit11)
+
+meto_envmods <- aictab(cand.set = meto_cand.set, second.ord = T)
+meto_envmods
+
+summary(Metofit10)
+
+#Models after selection
+summary(Simvfit7)
+summary(Atorfit9)
+summary(Carvfit5)
+summary(Metofit10)
+```
+
+## **Sites and Sampling Postion Differences**
+Grab samples were collected at 3 different wastewater treatement plants (WWTPs), also referenced as sites (s), and at each individual plant there were 4 different positions from which grab samples were taken. These 4 positions (p) are referenced as influent (raw sewage), effluent (treated water), upstream (of the discharge pipe), and downstream (downstream of the discharge pipe). Our response variable is the environmental concentration at all sites and positions and our predictor variables are the factors of site and position. In order to compare the differences in environmental concentrations at each site and at all 4 positions, contrasts between these two factors were calculated from the following linear model assuming Gaussian random variables:
+$$y_{sp} = \beta_0 + \beta_{site} + \beta_{position} + \epsilon_{sp}$$
+The residuals for our contrasts are also assumed to be Gaussian random variables:
+$$ \epsilon_{sp} \sim (0, \ \sigma^2)$$
+For the contrasts we assume that the linear combinatin of multivariate randome variables are also Guassian:
+$$ XY_{sp} \sim \sf Gaussian(X\mu, X\Sigma X')$$
+X represents the contrast matrices, Y represents the slope coefficients from each model, and $\Sigma$ represents the covariance matrices between the site and position parameters.
+
+Testing for significance between these various factors we used a Wald's test setting the alpha-level at ($\alpha\le$ 0.05). The glht function was used in the package MULTCOMP in R to perform multiple contrast hypothesis tests. Significant variables should indicate that there are important differences between cites and/or sampling positions. Differences in the effluent and influent as well as differences between the upstream and downstream are key areas of interest.
+```{r Contrast Models, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+#Linear Gaussian model to look at location differences among the sites and positions
+library(readxl) #Package to read xlsx files
+library(tidyverse) #Package to manipulate dataframes
+library(multcomp) #Package for calculating contrasts
+posdat <- read_excel("Pharmaceutical data.xlsx", 
+                     sheet = "Position Model", col_types = c("text", 
+                                                             "text", "numeric", "numeric", "numeric","numeric"))
+head(posdat) #View first 5 rows and conform the data is correct and properly formatted.
+Simvfit_p <- lm(Simvastatin ~ Site + Position, data = posdat) #New linear model for simvastatin that takes into account site and sample position
+summary(Simvfit_p)
+
+Atorfit_p <- lm(Atorvostatin ~ Site + Position, data = posdat) #New linear model for Atorvastatin that takes into account site and sample position
+summary(Atorfit_p)
+
+Metofit_p <- lm(Metoprolol ~ Site + Position, data = posdat)#New linear model for Metoprolol that takes into account site and sample position
+summary(Metofit_p)
+
+Carvfit_p <- lm(Carvedilol ~ Site + Position, data = posdat)#New linear model for Carvedilol that takes into account site and sample position
+summary(Carvfit_p)
+
+##Contrast comparison to see differences between other sites and positions
+#I know this is a lot of code but I had to test each drug 1 at a time and compared Elkins vs Weston and then Effluent vs Influent for the sake of seeing if our treatment plants remove a significant amount of pharmaceutical waste from sewage water. The other critical question for position is if the downstream is significantly greater than upstream.
+
+#Simvastatin differences between Elkins and Weston
+#Simvastatin site contrast matrices
+simv_betas <- coef(Simvfit_p) #Beta coefficients
+simv_x_site1 <- matrix(c(0,-1,1,0,0,0), nrow = 1) #Contrast matrix for elkins and weston
+simv_x_site2 <- matrix(c(-1,0,1,0,0,0), nrow = 1) #Contrast matrix for buckhannon and weston
+simv_x_site3 <- matrix(c(-1,1,0,0,0,0), nrow = 1) #Contrast matrix for buckhannon and elkins
+simv_site_cntr1 <- glht(Simvfit_p, linfct = simv_x_site1)
+summary(simv_site_cntr1, test = adjusted('none')) #Contrast Results for Elkins vs Weston
+simv_site_cntr2 <- glht(Simvfit_p, linfct = simv_x_site2)
+summary(simv_site_cntr2, test = adjusted('none')) #Contrast Results for Buckhannon vs Weston
+simv_site_cntr3 <- glht(Simvfit_p, linfct = simv_x_site3)
+summary(simv_site_cntr3, test = adjusted('none')) #Contrast Results for Buckhannon vs Elkins
+
+#Simvastatin Position differences (Effluent vs Influent)
+simv_x_pos1 <- matrix(c(0,0,0,-1,1,0), nrow = 1) #Contrast matrix for influent and effluent
+simv_x_pos2 <- matrix(c(-1,0,0,0,0,1), nrow = 1) #Contrast matrix for upstream and downstream
+simv_pos_cntr1 <- glht(Simvfit_p, linfct = simv_x_pos1)
+summary(simv_pos_cntr1, test = adjusted('none')) #Contrast Results for Influent vs Effluent
+simv_pos_cntr2 <- glht(Simvfit_p, linfct = simv_x_pos2)
+summary(simv_pos_cntr2, test = adjusted('none')) #Contrast Results for Upstream vs Downstream
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#Atorvostatin differences between Elkins and Weston
+#Atorvostatin site contrast matrices
+ator_betas <- coef(Atorfit_p) #Beta coefficients
+ator_x_site1 <- matrix(c(0,-1,1,0,0,0), nrow = 1) #Contrast matrix for elkins and weston
+ator_x_site2 <- matrix(c(-1,0,1,0,0,0), nrow = 1) #Contrast matrix for buckhannon and weston
+ator_x_site3 <- matrix(c(-1,1,0,0,0,0), nrow = 1) #Contrast matrix for buckhannon and elkins
+ator_site_cntr1 <- glht(Atorfit_p, linfct = ator_x_site1)
+summary(ator_site_cntr1, test = adjusted('none')) #Contrast Results for Elkins vs Weston
+ator_site_cntr2 <- glht(Atorfit_p, linfct = ator_x_site2)
+summary(ator_site_cntr2, test = adjusted('none')) #Contrast Results for Buckhannon vs Weston
+ator_site_cntr3 <- glht(Atorfit_p, linfct = ator_x_site3)
+summary(ator_site_cntr3, test = adjusted('none')) #Contrast Results for Buckhannon vs Elkins
+
+#Atorvostatin Position differences (Effluent vs Influent)
+ator_x_pos1 <- matrix(c(0,0,0,-1,1,0), nrow = 1) #Contrast matrix for influent and effluent
+ator_x_pos2 <- matrix(c(-1,0,0,0,0,1), nrow = 1) #Contrast matrix for upstream and downstream
+ator_pos_cntr1 <- glht(Atorfit_p, linfct = ator_x_pos1)
+summary(ator_pos_cntr1, test = adjusted('none')) #Contrast Results for Influent vs Effluent
+ator_pos_cntr2 <- glht(Atorfit_p, linfct = ator_x_pos2)
+summary(ator_pos_cntr2, test = adjusted('none')) #Contrast Results for Upstream vs Downstream
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#Carvedilol differences between Elkins and Weston
+#Carvedilol site contrast matrices
+carv_betas <- coef(Carvfit_p) #Carvedilol beta coefficients
+carv_x_site1 <- matrix(c(0,-1,1,0,0,0), nrow = 1) #Contrast matrix for elkins and weston
+carv_x_site2 <- matrix(c(-1,0,1,0,0,0), nrow = 1) #Contrast matrix for buckhannon and weston
+carv_x_site3 <- matrix(c(-1,1,0,0,0,0), nrow = 1) #Contrast matrix for buckhannon and elkins
+carv_site_cntr1 <- glht(Carvfit_p, linfct = carv_x_site1)
+summary(carv_site_cntr1, test = adjusted('none')) #Contrast Results for Elkins vs Weston
+carv_site_cntr2 <- glht(Carvfit_p, linfct = carv_x_site2)
+summary(carv_site_cntr2, test = adjusted('none')) #Contrast Results for Buckhannon vs Weston
+carv_site_cntr3 <- glht(Carvfit_p, linfct = carv_x_site3)
+summary(carv_site_cntr3, test = adjusted('none')) #Contrast Results for Buckhannon vs Elkins
+
+
+#Carvedilol Position differences (Effluent vs Influent)
+carv_x_pos1 <- matrix(c(0,0,0,-1,1,0), nrow = 1) #Contrast matrix for influent and effluent
+carv_x_pos2 <- matrix(c(-1,0,0,0,0,1), nrow = 1) #Contrast matrix for upstream and downstream
+carv_pos_cntr1 <- glht(Carvfit_p, linfct = carv_x_pos1)
+summary(carv_pos_cntr1, test = adjusted('none')) #Contrast Results for Influent vs Effluent
+carv_pos_cntr2 <- glht(Carvfit_p, linfct = carv_x_pos2)
+summary(carv_pos_cntr2, test = adjusted('none')) #Contrast Results for Upstream vs Downstream
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#Metoprolol differences between Elkins and Weston
+#Metoprolol site contrast matrices
+meto_betas <- coef(Metofit_p) #Carvedilol beta coefficients
+meto_x_site1 <- matrix(c(0,-1,1,0,0,0), nrow = 1) #Contrast matrix for elkins and weston
+meto_x_site2 <- matrix(c(-1,0,1,0,0,0), nrow = 1) #Contrast matrix for buckhannon and weston
+meto_x_site3 <- matrix(c(-1,1,0,0,0,0), nrow = 1) #Contrast matrix for buckhannon and elkins
+meto_site_cntr1 <- glht(Metofit_p, linfct = meto_x_site1)
+summary(meto_site_cntr1, test = adjusted('none')) #Contrast Results for Elkins vs Weston
+meto_site_cntr2 <- glht(Metofit_p, linfct = meto_x_site2)
+summary(meto_site_cntr2, test = adjusted('none')) #Contrast Results for Buckhannon vs Weston
+meto_site_cntr3 <- glht(Metofit_p, linfct = meto_x_site3)
+summary(meto_site_cntr3, test = adjusted('none')) #Contrast Results for Buckhannon vs Elkins
+
+
+#Metoprolol Position differences (Effluent vs Influent)
+meto_x_pos1 <- matrix(c(0,0,0,-1,1,0), nrow = 1) #Contrast matrix for influent and effluent
+meto_x_pos2 <- matrix(c(-1,0,0,0,0,1), nrow = 1) #Contrast matrix for upstream and downstream
+meto_pos_cntr1 <- glht(Metofit_p, linfct = meto_x_pos1)
+summary(meto_pos_cntr1, test = adjusted('none')) #Contrast Results for Influent vs Effluent
+meto_pos_cntr2 <- glht(Metofit_p, linfct = meto_x_pos2)
+summary(meto_pos_cntr2, test = adjusted('none')) #Contrast Results for Upstream vs Downstream
+```
+
+## **Downstream Concentration Prediction Models**
+The final research question of interest is if there is a possibility of effectively predicting the environmental concentration of these pharmaceuticals downstream from the WWTPs. Using the downstream concentration of each pharmaceutical as the response variable and the upstream, influent, and effluent concentrations as predictor variables the following Guassian linear model was examined as a potentially useful model:
+$$y_{downstream} = \beta_{upstream} + \beta_{effluent} + \beta_{influent} + \beta_{effluent *   influent} + \epsilon_{downstream}$$
+An interaction term exists between influent and effluent since influent directly effects how much pharmaceutical waste is present in the treated effluent water. While it is not possible to accurately predict the rate of pharmaceutical waste removal the interaction is still significant and needs to be taken into account. Student's t-test was utilized to calculate both a test statistic and a p-value for each predictor variable as well s the overall p-value of the model ($\alpha \le0.05$). At the same time we are interested in seeing which predictor variables are significant in predicting changes in our downstream concentrations as well as seeing how much variance exists in our model by inspecting the confidence intervals. Confidence intervals were assessed at 95%.
+```{r Downstream Prediction Models, eval=FALSE, include=FALSE}
+#Predictive models with Confidence Intervals for downstream Concentrations
+library(readxl) #package to read xlsx files
+library(tidyverse) #package to manipulate dataframes
+predict_data <- read_excel("Pharmaceutical data.xlsx", #Import data as xlsx file
+               sheet = "Downstream Prediction Model", 
+              col_types = c("numeric", "numeric", "numeric", 
+               "numeric", "numeric", "numeric", 
+               "numeric", "numeric", "numeric", 
+               "numeric", "numeric", "numeric", 
+              "numeric", "numeric", "numeric", "numeric"))
+
+head(predict_data) #inspect data was properly imported and formatted
+
+#Generate downstream prediction linear models with interaction term for effluent and influent
+predict_metoprolol <- lm(Meto_down ~ Meto_ups + Meto_eff * Meto_inf, data = predict_data) 
+summary(predict_metoprolol)
+
+predict_carvedilol <- lm(Carv_down ~ Carv_ups + Carv_eff * Carv_inf, data = predict_data) 
+summary(predict_carvedilol)
+
+predict_atorvostatin <- lm(Ator_down ~ Ator_ups + Ator_eff * Ator_inf, data = predict_data)
+summary(predict_atorvostatin)
+
+predict_simvastatin <- lm(Simv_down ~ Simv_ups + Simv_eff * Simv_inf, data = predict_data)
+summary(predict_simvastatin)
+
+
+```
+
+```{r Environmental Models post selection plots, eval=FALSE, include=FALSE}
+#Environmental Models plotting code
+par(mfrow=c(2,2)) #Creates a panel of graphs
+#Simvastatin
+newdat_simvenv <- data.frame(
+  cfs = seq(0, max(envdat$cfs), length.out = 100)) #New dataframe to go with predicted values
+head(newdat_simvenv)
+simvenv_prd <- predict.lm(Simvfit7, newdata = newdat_simvenv, se.fit = TRUE, type = "response") #predict function to create predicted values with standard error
+plot(y = simvenv_prd$fit, x = newdat_simvenv$cfs, main = "Simvastatin", #Base R plot with lables 
+     xlab = "flow (cfs)",
+     ylab = "Simvastatin ng/L", cex.axis = 1.5, type = "l")
+#No confidence intervals because the variance was so large they didn't even show up!
+
+#Atorvastatin
+newdat_atorenv <- data.frame(
+  Temperature = seq(0, max(envdat$Temperature), length.out = 100))
+head(newdat_atorenv)
+atorenv_prd <- predict.lm(Atorfit9, newdata = newdat_atorenv, se.fit = TRUE, type = "response")
+plot(y = atorenv_prd$fit, x = newdat_atorenv$Temperature, main = "Atorvastatin", 
+     xlab = "Temperature (C°)",
+     ylab = "Atorvastatin ng/L", cex.axis = 1.5, type = "l")
+
+#Carvediol
+newdat_carvenv <- data.frame(
+  cfs = seq(min(envdat$cfs), max(envdat$cfs), length.out = 100),
+  Temperature = seq(0, 29, length.out = 100))
+head(newdat_carvenv)
+carvenv_prd <- predict.lm(Carvfit5, newdata = newdat_carvenv, se.fit = TRUE, type = "response")
+plot(y = carvenv_prd$fit, x = newdat_carvenv$Temperature, main = "Carvedilol", 
+     xlab = "Temperature (C°)",
+     ylab = "Carvedilol ng/L", cex.axis = 1.5, type = "l")
+
+#Metoprolol
+newdat_metoenv <- data.frame(
+  Conductivity = seq(min(envdat$Conductivity), max(envdat$Conductivity), length.out = 100))
+head(newdat_metoenv)
+metoenv_prd <- predict.lm(Metofit10, newdata = newdat_metoenv, se.fit = TRUE, type = "terms")
+plot(y = metoenv_prd$fit, x = newdat_metoenv$Conductivity, main = "Metoprolol", 
+     xlab = "Conductivity (µS/cm)",
+     ylab = "Metoprolol ng/L", cex.axis = 1.5, type = "l", ylim = c(0,120), xlim = c(200,max(envdat$Conductivity))) #Some creative coding here because the sequence code was being difficult on the scaling
+```
+
+```{r Predicted concentration plots, eval=FALSE, include=FALSE}
+#Setting up prediction plots with Confidence interval lines.
+#These plots are created and saved as JPEGs for quality control purposes and re-uploaded into Rmarkdown. These can be run and viewed in Rmarkdown but the high quality versions in the PDF are made separate with the same code.
+par(mfrow=c(2,2)) #Creates an nice panel when you have multiple plots like this
+#Metoprolol prediction plot with confidence intervals
+newdat_meto <- data.frame( #New datafram to go with the predicted values
+  Meto_ups = seq(0, max(predict_data$Meto_ups), length.out = 100),
+  Meto_eff = seq(min(predict_data$Meto_eff), max(predict_data$Meto_eff), length.out = 100),
+  Meto_inf = seq(min(predict_data$Meto_inf), max(predict_data$Meto_inf), length.out = 100)
+)
+head(newdat_meto)
+meto_prd <- predict.lm(predict_metoprolol, newdata = newdat_meto, se.fit = TRUE, type = "response") #The cousin to predict.glm but for regular linear models, use "response" not "terms"
+meto_low <- meto_prd$fit - qnorm(0.975) * meto_prd$se.fit #CI 95%
+meto_high <- meto_prd$fit + qnorm(0.975) * meto_prd$se.fit
+plot(y = meto_prd$fit, x = newdat_meto$Meto_inf, main = "Metoprolol", 
+     xlab = "Influent Concentration ng/L",
+     ylab = "Downstream Concentration ng/L", cex.axis = 1.5, type = "l")
+lines(x = newdat_meto$Meto_inf, y = meto_low, lty = 2)
+lines(x = newdat_meto$Meto_inf, y = meto_high, lty = 2) #How we insert the dashed Confidence intervals lines
+#rinse and repeat with the next 3!
+
+#Carvedilol prediction plot with confidence intervals
+newdat_carv <- data.frame(
+  Carv_ups = seq(0, max(predict_data$Carv_ups), length.out = 100),
+  Carv_eff = seq(min(predict_data$Carv_eff), max(predict_data$Carv_eff), length.out = 100),
+  Carv_inf = seq(min(predict_data$Carv_inf), max(predict_data$Carv_inf), length.out = 100)
+)
+head(newdat_carv)
+carv_prd <- predict.lm(predict_carvedilol, newdata = newdat_carv, se.fit = TRUE, type = "response")
+carv_low <- carv_prd$fit - qnorm(0.975) * carv_prd$se.fit
+carv_high <- carv_prd$fit + qnorm(0.975) * carv_prd$se.fit
+plot(y = carv_prd$fit, x = newdat_carv$Carv_inf, main = "Carvedilol", 
+     xlab = "Influent Concentration ng/L",
+     ylab = "Downstream Concentration ng/L", cex.axis = 1.5, type = "l")
+lines(x = newdat_carv$Carv_inf, y = carv_low, lty = 2)
+lines(x = newdat_carv$Carv_inf, y = carv_high, lty = 2)
+
+#Atorvostatin prediction plot with confidence intervals
+newdat_ator <- data.frame(
+  Ator_ups = seq(0, max(predict_data$Ator_ups), length.out = 100),
+  Ator_eff = seq(min(predict_data$Ator_eff), max(predict_data$Ator_eff), length.out = 100),
+  Ator_inf = seq(min(predict_data$Ator_inf), max(predict_data$Ator_inf), length.out = 100)
+)
+head(newdat_ator)
+ator_prd <- predict.lm(predict_atorvostatin, newdata = newdat_ator, se.fit = TRUE, type = "response")
+ator_low <- ator_prd$fit - qnorm(0.975) * ator_prd$se.fit
+ator_high <- ator_prd$fit + qnorm(0.975) * ator_prd$se.fit
+plot(y = ator_prd$fit, x = newdat_ator$Ator_inf, main = "Atorvastatin", 
+     xlab = "Influent Concentration ng/L",
+     ylab = "Downstream Concentration ng/L", cex.axis = 1.5, type = "l")
+lines(x = newdat_ator$Ator_inf, y = ator_low, lty = 2)
+lines(x = newdat_ator$Ator_inf, y = ator_high, lty = 2)
+
+
+#Simvastatin prediction plot with confidence intervals
+newdat_simv <- data.frame(
+  Simv_ups = seq(0, max(predict_data$Simv_ups), length.out = 100),
+  Simv_eff = seq(min(predict_data$Simv_eff), max(predict_data$Simv_eff), length.out = 100),
+  Simv_inf = seq(min(predict_data$Simv_inf), max(predict_data$Simv_inf), length.out = 100)
+)
+head(newdat_simv)
+simv_prd <- predict.lm(predict_simvastatin, newdata = newdat_simv, se.fit = TRUE, type = "response")
+simv_low <- simv_prd$fit - qnorm(0.975) * simv_prd$se.fit
+simv_high <- simv_prd$fit + qnorm(0.975) * simv_prd$se.fit
+plot(y = simv_prd$fit, x = newdat_simv$Simv_inf, main = "Simvastatin", 
+     xlab = "Influent Concentration ng/L",
+     ylab = "Downstream Concentration ng/L", cex.axis = 1.5, type = "l");
+lines(x = newdat_simv$Simv_inf, y = simv_low, lty = 2);
+lines(x = newdat_simv$Simv_inf, y = simv_high, lty = 2)
+```
+
+
+```{r Table Magic note, eval=FALSE, include=FALSE}
+#All of the tables were created based off values copied and pasted from these R outputs in order to achieve manuscript quality tables. R has some tools but they are not ideal for this level of table creation.
+```
+
+
+# **RESULTS**
+For this study we collected a total of 36 water quality measurements and obtained a total of 48 1L grab samples across 3 wastewater treatment facilities at 4 different sampling positions per site. This project is intended to be a pilot study with these results showing potential relationships that justify further investigation. Significant results were obtained in all 3 analyses and they will be discussed in the order that they were initially presented for clarity.
+
+## Water Quality Models
+Water quality variables displayed some predictability of environmental pharmaceutical concentrations. Using equation (1) in conjuction with a second-order AIC (AICc) the model of best fit was selected for each pharmaceutical under the condtion that ($\Delta \sf{AIC} \le 2$). The results of the AICc (Table 1.) revealed that models containing flow (cfs), tempterature (C°), and conductivity (µS/cm) were the best fit. As seen in the model outputs not all predictor variables were significant even in the model of best fit (Table 2.). Carvedilol's best fitting model used solely the 'Month' variable, but it was ruled out because it was not likley to be a good predictor with only 4 months of data. 3 out of the 4 water quality predictors displayed an inverse relationship with the pharmaceutical concentrations with the exception of Metoprolol which displayed a positive relationship with conductivity (figure 3.). The significance of these findings is that flow and temperature appear to be key influencers on pharmaceutical concentration and by monitoring these variables it might be possible to roughly estimate the current concentrations pharmaceutical concentrations in the environment without having to directly test the surface water. For further information on the model selection and the models chosen refer to tables 1 and 2.
+
+## Site and Position Comparisons
+Site and position contrasts revealed a plethora of interesting information as it relates to concentration differences between cites and between positions relative to the WWTP. All of the linear models used to calculate the contrasts displayed significant p-values ($\alpha \le 0.05$)(Table 3.). At the same time influent concentrations for all 4 pharmaceuticals were significant indicating that the influent has much greater quanities of pharmaceuticals than the rest of the positions we measured. At the same time when we compared the influent to the effluent it often came back significant which indicates a large poportion of this waste is being treated by our WWTPs (Table 4.). Another key result was that there are significant differences between each WWTP in terms of pharmaceutical concentrations. This result most likely indicates that the input sources are varied between each plant or that one plant is more efficient at treating pharmaceutical waste than the others. For a full breakdown on all of these numerical results use tables 3 and 4.
+
+## Downstream Concentrations Models
+Predicting downstream concentrations based on quantified inputs is an imporant part of determining pollution sources and areas of concern. Using the influent, effluent, and upstream concentrations to predict downstream concentrations provided a more accurate model than water quality parameters alone. While few individual predcitors were significant for any of the 4 models, the overall model for Atorvastatin and Metoprolol was significant (Table 5.). Visually comparing each model with their 95% confidence intervals makes it obvious which models do a better job accounting for the variance (Figure 4.). At the same time the average concentration value of Atorvastatin and Metoprolol was significantly higher than Simvastatin or Carvedilol. These results indicate that Metoprolol and Atorvastatin persist in higher concentrations in our surface waters. While these concentrations are in ng/L some aquatic organisms can still experience detrimental effects from even trace concentrations. As our populations increase it is reasonable to assume that the influent concentration will increase as more individuals excrete these pharmaceuticals leading to higher concentrations in our surface waters.
+
+# **FIGURES AND TABLES**
+
+![Site map of study area.](WWTP Locations.jpg)
+
+\newpage
+
+
+![Diagram of collection sites at each waste water treatrement facility.](Sampling design.jpg)
+
+
+\newpage
+
+![Environmental predictors relationship to each pharmaceutical based on model of best fit.](Environmental Variable Plots.png)
+
+
+
+\newpage
+
+
+![](Predicted concentration plots.jpeg){width=-10%}
+Figure 4. Predicted downstream concentrations of all 4 pharmaceuticals plotted against influent concentrations. 95% confidence intervals are denoted by the dashed lines.
+
+\newpage
+ 
+![](All AICc Scores for Environmental Models.png){width=95%}
+
+Table 1. Simvastatin environmental model AICc scores and weights for each model.
+
+
+![](Environmental Linear Model outputs.png)
+Table 2. Linear model results for all 4 pharmaceuticals showing which evnironmental prediction models were the best fit and their associated predictors for each pharmaceutical.
+
+\newpage
+\blandscape
+
+![](Contrast Linear Models.png)
+
+Table 3. Linear model results for environmental concentrations of simvastatin, atorvastatin, carvedilol, and metoprolol where site and sampling position are the predictor variables.
+
+\newpage
+
+![](Contrast Result Table.png)
+Table 4. Contrast results using from linear models to determine differences between sites (WWTPs) and positions relative to the WWTP for all 4 pharmaceuticals in question. P-values are considered significant if $\le0.05$.
+
+![](Predicted downstream linear model outputs.png)
+Table 5. Linear model outputs for all 4 pharmaceuticals that treat the downstream concentration as the response variable and the other 3 positions at predictor variables. Interaction occurs between influent and enfluent concentrations since influent directly effects concentrations in treated waste water.
+
+\elandscape

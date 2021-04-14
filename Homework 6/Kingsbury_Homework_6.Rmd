@@ -1,0 +1,86 @@
+---
+title: "WMAN 633 Homework 6"
+author: "Joe Kingsbury"
+output: html_notebook
+---
+
+## **Question 1**
+Load data and place into an unmarkedFramePCount object
+```{r Question 1}
+#set working directory, setwd(choose.dir())
+count <- read.csv("count.csv")
+obs_covs <- read.csv("obs_covs.csv")
+site_covs <- read.csv("site_covs.csv")
+
+head(count) #y or detect/non-detect
+head(obs_covs) # detection covarites
+head(site_covs) # site covariates
+
+library(unmarked)
+count_mat <- as.matrix(count)
+det_covs <- list(
+  det = data.frame(obs_covs[, c('j1', 'j2', 'j3')]))
+
+site_covs$x2 <- factor(site_covs$x2)
+
+nmix_data <- unmarkedFramePCount(y = count_mat, 
+                                 siteCovs = site_covs, 
+                                 obsCovs = det_covs)
+head(nmix_data)
+```
+
+## **Question 2**
+Fit an N-mixture model that assumes conditional detection probability is a function of the detection covariate provided, and expected abundance is a additive function of variables x1 and x2.
+```{r Question 2}
+fit <- pcount(formula = ~ det ~ x1 + x2, data = nmix_data, K = 100)
+summary(fit)
+```
+
+
+## **Question 3**
+Interpret the effect of x1 on the expected count at each site. Verity your interpretation in R
+```{r Question 3}
+betas <- coef(fit)
+p_1 <- betas[1] + betas[2]
+p_2 <- betas[1] + betas[2] * 2
+p_2 - p_1 #same as the x1 coefficient
+exp(p_2 - p_1)
+```
+With every 1-unt increase in x1 the expected count increases by 1.44.
+
+## **Question 4**
+Predict and plot the effect of the supplied detection covariate. Do this over the range of this covariate.
+```{r Question 4}
+new_det <- data.frame(det = seq(min(det_covs$det), max(det_covs$det), length.out = 100))
+new_det
+
+prd <- predict(object = fit, newdata = new_det, type = 'det')
+prd
+
+
+plot(x = new_det$det, y = prd$Predicted, type = "l", ylab = "Predicted Probability of Detection", xlab = "Detection Covariate")
+lines(x = new_det$det, y = prd$lower, lty = 2)
+lines(x = new_det$det, y = prd$upper, lty = 2)
+```
+
+## **Question 5**
+Use contrasts to compare expected abundance between all pairwise levels of variable x2. Obtain p-values associated with each contrast and tell me whether you reject or fail to reject each null hypothesis tested.
+```{r Question 5}
+x_cntr <- matrix(
+c(0, 0, 1, -1, 0,
+0, 0, 1, 0, -1,
+0, 0, 0, 1, -1),
+nrow = 3, byrow = T
+)
+
+x_cntr
+
+lin_com<- linearComb(obj = fit, coefficients = x_cntr, type = 'state')
+
+w <- coef(lin_com) / SE(lin_com)
+w
+
+p_values <- 2 * pnorm(-1 * abs(w))
+p_values
+```
+Based on the contrast matrix and the calculated p-values from our Wald test we fail to reject the null hypothesis that the expected abuncance between X2b and X2c is different. As for X2b and X2d we do reject the null hypotheses and there is a significant difference in expected abundance between these two variables. Then, for X2c and X2d we again reject the null hypothesis and there is a significant difference in expected abundance.

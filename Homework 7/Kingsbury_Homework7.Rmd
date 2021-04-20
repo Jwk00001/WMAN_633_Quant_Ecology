@@ -1,0 +1,113 @@
+---
+title: "WMAN 633 Homework 7"
+author: "Joe Kingsbury"
+Date: "April 19th, 2021"
+output: html_notebook
+---
+
+## **Question 1**
+Load data and place into an unmarkedFrameOccu object
+
+```{r, echo=TRUE}
+#Set working directory
+#setwd(choose.dir())
+bobcat <- read.csv("Bobcat.csv") # detection/non-detection data
+p_covs <- read.csv("p covariates.csv") #Detection covarites
+psi_covs <- read.csv("psi covariates.csv") #Site level covairates
+
+bobcat_mat <- as.matrix(bobcat)
+
+det_covs <- list(
+  People = data.frame(p_covs[,c(1:71)]))
+head(det_covs$People)
+library(unmarked)
+
+occu_data <- unmarkedFrameOccu(y = bobcat_mat, siteCovs = psi_covs, obsCovs = det_covs)
+head(occu_data)
+```
+
+## **Question 2**
+Fit the following candidate set of models:
+
+Detection model |Occupancy model
+--------------- | ----------------
+intercept-only  |intercept-only
+people          |intercept-only
+intercept-only  |disturbance
+people          |disturbance
+
+```{r, echo=TRUE}
+fit1 <- occu(~ 1 ~ 1, data = occu_data)
+fit2 <- occu(~ People ~ 1, data = occu_data)
+fit3 <- occu(~ 1 ~ Dist_5km, data = occu_data)
+fit4 <- occu(~ People ~ Dist_5km, data = occu_data)
+summary(fit1)
+summary(fit2)
+summary(fit3)
+summary(fit4)
+```
+
+## **Question 3**
+Perform model selection with AIC. What is your top model? How do you know? Is there model selection uncertainty?
+
+```{r, echo=TRUE}
+library(AICcmodavg)
+occu_cand.set <- list(
+  F1 = fit1, F2 = fit2, F3 = fit3, F4 = fit4)
+
+occu_mods <- aictab(cand.set = occu_cand.set, second.ord = F)
+occu_mods
+```
+My top model is model 3, fit3, which uses the intercept-only for the detection model and the disturbance within 5km for the abundance model. I know this is my top model because the $\Delta$AIC for Model 1 and Model 2 is greater than 2. There is some uncertainty between model 3 and model because the $\Delta$AIC between Model 3 and Model 4 is less than 2.
+
+## **Question 4**
+Average both the effect of people on detection, and disturbance on occupancy, over all models. Report model-averaged slope coefficients and 95% confidence intervals.
+
+```{r, echo=TRUE}
+#People's effect on detection across all models
+people_avg <- modavgShrink(cand.set = occu_cand.set, parm = 'People', second.ord = F, parm.type = 'detect')
+
+People_slopecoef <- people_avg$Mod.avg.beta
+People_slopecoef
+
+people_95 <- cbind(people_avg$Lower.CL,people_avg$Upper.CL)
+people_95
+
+#Effect of disturbance on occupancy across all models
+dist_avg <- modavgShrink(cand.set = occu_cand.set, parm = 'Dist_5km', second.ord = F, parm.type = 'psi')
+
+Dist_5km_slopecoef <-  dist_avg$Mod.avg.beta
+Dist_5km_slopecoef
+
+dist_95 <- cbind(dist_avg$Lower.CL, dist_avg$Upper.CL)
+dist_95
+```
+
+## **Question 5**
+Obtain and plot model-averaged predictions of occupancy probability and detection probability. Average over all models, and make predictions over the observed range of each variable.
+
+```{r, echo=TRUE}
+#Detection predictions
+p_covs[is.na(p_covs)] = 0 #Necessary because you can't generate new data with NAs
+new_p <- data.frame(
+  People = seq(min(p_covs[1:71]), to = max(p_covs[1:71]), length.out = 100))
+
+avg_prd_det <- modavgPred(cand.set = occu_cand.set, newdata = new_p, second.ord = F, parm.type = 'detect') 
+avg_prd_det
+
+plot(x = new_p$People, y = avg_prd_det$mod.avg.pred, type = 'l', ylab = 'Predicted Detection Probability', xlab = 'People', ylim = c(0, max(avg_prd_det$upper.CL)))
+lines(x = new_p$People, y = avg_prd_det$upper.CL, lwd = 1, lty = 2)
+lines(x = new_p$People, y = avg_prd_det$lower.CL , lty = 2)
+
+#Occupancy predictions
+new_psi <- data.frame(Dist_5km = seq(from = min(psi_covs), to = max(psi_covs), length.out = 100))
+new_psi
+
+avg_prd_occupancy <- modavgPred(cand.set = occu_cand.set, newdata = new_psi, second.ord = F, parm.type = 'psi')
+avg_prd_occupancy
+
+plot(x = new_psi$Dist_5km, y = avg_prd_occupancy$mod.avg.pred, type = 'l', ylab = 'Predicted Occupancy Probability', xlab = 'Disturbance within 5km')
+lines(x = new_psi$Dist_5km, y = avg_prd_occupancy$upper.CL, lwd = 1, lty = 2)
+lines(x = new_psi$Dist_5km, y = avg_prd_occupancy$lower.CL , lty = 2)
+```
+

@@ -1,0 +1,93 @@
+---
+title: 'WMAN 633 Homework '
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+# Question 1
+Fit an N-mixture model that assumes abundance is a function of wetland size and type, and detection probability is a function of sky and time (5 points).
+
+```{r}
+#set working directory
+y <- read.csv('sosp_nmix.csv')
+p_covs <- read.csv('p_covs_nmix.csv') #Detection covariates
+site_covs <- read.csv('n_covs_nmix.csv') #Site-level covariates
+
+head(y)
+head(p_covs)
+head(site_covs)
+library(unmarked)
+
+sosp_mat <- as.matrix(y) 
+det_covs <- list(
+  time = data.frame(p_covs[,c("time.1", "time.2")]),
+  sky = data.frame(sky.1 = factor(p_covs$sky.1),
+                   sky.2 = factor(p_covs$sky.2))
+)
+
+nmix_data <- unmarkedFramePCount(y = sosp_mat,
+                                 siteCovs = site_covs,
+                                 obsCovs = det_covs)
+fit <- pcount(formula = ~ sky + time ~ size + type, data = nmix_data, K = 100)
+summary(fit)
+```
+
+# Question 2
+Write a function that calculates the sum of squared Pearson residuals from a fitted model. This test statistic can be calculated as: 
+
+refer to pdf handout for written equation
+
+where yi is your observed count; $\lambda$i is expected abundance at site i; and Pij is estimated detection probability at site i during replicate survey j. Note that both i and Pij can be obtained using the predict() function (10 points).
+
+```{r}
+#Estimates of abundance lambda
+fitted_psi <- predict(fit, type = 'state') 
+fitted_psi$Predicted[1]
+
+#Estimates of p_ij
+fitted_p <- predict(fit, type = 'det')
+fitted_p$Predicted[1]
+
+fitted_psi$Predicted[1] * fitted_p$Predicted[1]
+fitted(fit)[1]
+
+chsq <- sum((fitted(fit) - sosp_mat) ^ 2 /
+(fitted(fit) * (1 - fitted(fit))))
+chsq
+
+#Function for test statistic
+chisq <- function(fit){
+  obs <- getY(fit@data)
+  ex <- fitted(fit)
+  ts <- (ex - obs) ^ 2 / (ex * (1 - ex))
+  return(sum(ts))
+}
+chisq(fit) #matches the value above!
+```
+
+# Question 3
+Use the parboot() function in R to simulate the distribution of this test statistic under the assumption that your fitted model is the data-generating model. Simulate 1000 values of the test statistic. Note that this may take several minutes (5 points).
+
+```{r}
+sims <- parboot(object = fit, statistic = chisq, nsim = 1000) 
+sims
+```
+
+# Question 4
+Plot the distribution of the simulated test statistic. Include in this plot the value of your test statistic calculated from your fitted model. What is the null hypothesis you are testing when conducting model checking? Do you reject or fail to reject this null hypothesis? What are the implications for how well your model fits the data (5 points)?
+
+```{r}
+hist(sims@t.star[, 1], xlab = 'chisq',
+main = 'distribution of test statistic',
+cex.axis = 1.5, cex.lab = 1.5, cex.main = 1.5)
+lines(x = rep(chisq(fit), 2),
+y = c(0, 1000), xlim = c(-120000,400000),
+col = 'red', lwd = 3)
+mtext("Test Stat = 4009.1", side = 3, line = -6, cex = 1, outer = TRUE)
+
+sum(sims@t.star[, 1] > chisq(fit)) / 1000
+```
+The null hypothesis I am testing while conducting a model check is that the fitted model is the data-generating model. The p-value from the simulated distribution is 0.08 which small but not small enough to reject the null hypothsis. If our model fits the data well then we know we are likely close to the "true" model. We will never know the "true" model but the closer we can get the more likely our model will be a useful one. At the same time if our model fails a GOF check then it means our fitted model does not do a good job of describing relationships within the data. If this is the case then perhaps different covariates or a different model might be more appropriate. 

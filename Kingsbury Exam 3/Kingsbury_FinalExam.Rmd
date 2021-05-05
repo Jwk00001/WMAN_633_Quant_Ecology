@@ -1,0 +1,151 @@
+---
+title: "WMAN 633 Final Exam"
+author: "Joe Kingsbury"
+Date: "May 5th,2021"
+output: html_notebook
+---
+
+# Question 1
+Describe a sampling procedure that may have given rise to this dataset.
+
+Visit N = 100 sites and at each site conduct J = 3 repilicate surveys. For each replicate survey record whether a species was detected = 1 or if it was not detected = 0. Record the occupancy covariate x1 and x2. During each replicate survey, record detection covariate obscov1 and obscov2.
+
+# Question 2
+Import data and fit an occupancy model that assumes detection probability is an additive function ofobscovs1 and obscovs2; and that occupancy probability is an additive function of x1 and x2.
+
+```{r}
+y <- read.csv("detect.csv") #Detection
+p_covsx1 <- read.csv("obscovs1.csv") #Detection covariates x1
+p_covsx2 <- read.csv("obscovs2.csv") #Detection covariates x2
+site_covs <- read.csv("sitecovs.csv") #Site level covariates
+
+library(unmarked)
+
+y_mat <- as.matrix(y)
+det_covs <- list(
+  obscovs1 = data.frame(p_covsx1),
+  obscovs2 = data.frame(p_covsx2))
+
+nmix_data <- unmarkedFramePCount(y = y_mat, # detection / non-detection
+siteCovs = site_covs, # site-level covs
+obsCovs = det_covs) # detection covariates
+
+occu_data <- unmarkedFrameOccu(y = y_mat, siteCovs = site_covs, obsCovs = det_covs)
+
+fit <- occu(~ obscovs1 + obscovs2 ~ x1 + x2, data = occu_data)
+summary(fit)
+```
+
+# Question 3
+Use contrasts to determine if occupancy probability different when x1 = 2 vs. when x1 = -2?
+```{r}
+cm <- matrix(c(0, 2, 0,
+               0, -2, 0), nrow = 2, byrow = T)
+cnt <- linearComb(obj = fit, coefficients = cm, type = 'state')
+pnorm(-1 * abs(coef(cnt) / SE(cnt))) * 2
+```
+The p-value is greater than 0.05 so we fail to reject the null hypothesis.
+
+# Question 4
+Use model selection to compare the following 4 models. Which model is the "top" model? How do you
+know?
+(a) ~ obscovs1 + obscovs2 ~ x1 + x2
+(b) ~ obscovs1 + obscovs2 ~ x1
+(c) ~ obscovs1 + obscovs2 ~ x2
+(d) ~ obscovs1 + obscovs2 ~ 1
+```{r}
+library(AICcmodavg)
+fit1 <- occu(~ obscovs1 + obscovs2 ~ x1 + x2, data = occu_data)
+fit2 <- occu(~ obscovs1 + obscovs2 ~ x1, data = occu_data)
+fit3 <- occu(~ obscovs1 + obscovs2 ~ x2, data = occu_data)
+fit4 <- occu(~ obscovs1 + obscovs2 ~ 1, data = occu_data)
+
+cand.set <- list(
+  F1 = fit1, F2 = fit2, F3 = fit3, F4 = fit4)
+mods <- aictab(cand.set = cand.set, second.ord = F)
+mods
+```
+The "top" model based on DeltaAIC and AIC weight is model (c) ~ obscovs1 + obscovs2 ~ x2. However model (a) is also very competitive based on its DeltaAIC of 0.29.
+
+# Question 5
+Obtain model-averaged estimates of x1. What conclusions do you draw regarding this variable?
+
+```{r}
+x1 <- modavgShrink(cand.set = cand.set, parm = 'x1', second.ord = F, parm.type = 'psi')
+x1
+```
+The confidence interval overlaps 0 which indicates that this coefficient has little to no discernable effect on occupancy probability.
+
+# Question 6
+Plot model-averaged predictions of how detection probability changes across the observed range of
+obscovs2.
+```{r}
+newdat <- data.frame(
+  obscovs1 = rep(0, 100),
+  obscovs2 = seq(min(p_covsx2), max(p_covsx2), length.out = 100))
+
+obscovs2_prd <- modavgPred(cand.set, newdata = newdat, second.ord = F, parm.type = 'detect')
+
+plot(x = newdat$obscovs2, y = obscovs2_prd$mod.avg.pred, type = 'l', ylim = c(min(obscovs2_prd$lower.CL), max(obscovs2_prd$upper.CL)))
+lines(x = newdat$obscovs2, y = obscovs2_prd$lower.CL, lty = 2)
+lines(x = newdat$obscovs2, y = obscovs2_prd$upper.CL, lty = 2)
+```
+
+# Question 7
+Evaluate the fit of the top model using the sum of squared Pearson’s residuals as a test statistic. A function for evaluating this test statistic is provided at the bottom of the exam.
+```{r}
+chisq <- function(fit3){
+  obs <- getY(fit3@data)
+  ex <- fitted(fit3)
+  ts <- (ex - obs) ^ 2 / (ex * (1 - ex))
+  return(sum(ts))
+}
+chisq(fit3) #matches the value above!
+
+sims3 <- parboot(object = fit3, statistic = chisq, nsim = 100) 
+sims3
+
+sum(sims3@t.star[, 1] > chisq(fit3)) / 100
+```
+The top model, model (c), passes the goodness of fit test. Based on the p-value > 0.05 we fail to reject the null hypothesis indicating that this model does a good enough job of simulating the data we are observing.
+
+# Question 8
+What is the closure assumption? What are the consequences of violating the closure assumption? Tell me why violating the closure assumption results in these consequences.
+
+The closure assumption is that the number of individuals is constant across all replicate surveys. When the closure assumption is violated the consequences result in an underestimation of detection probability and an over estimation of abundance. The detection probability is underestimated becasue individuals may move in and out of the sampling area between "seasons" reducing estimated detection and abundance is overestimated since we are not identifying "individuals" but rather counts. There is no way of knowing if we are counting the same individual multiple times when we violate closure leading to inflated abundance counts. 
+
+# Question 9
+Assume you have variable p that is bounded between 0 and 1. Further, assume p = 0.25. What link function would you use to transform p to the real number line? What is the analogous vale of p = 0.25 on the real number line?
+```{r}
+p <- 0.25
+log(p/(1-p))
+```
+I would use the logit link to convert p to the real number line.
+
+# Question 10
+Assume you have a random variable that can only obtain values of 0, 1, 2, ..., 1. What probability
+distribution might you use to model such data? What is (are) the parameter(s) of this probability
+distribution? What link function might you use if you wanted to model that parameter as a linear
+function of variables?
+
+I would use a Poisson distribution to model this type of data. The parameters are lambda greater than 0. I would use the log link function to model lambda as a linear function of varaibles.
+
+# Question 11
+Discuss null hypothesis significance testing within the context of model checking. Be sure to include the following phrases in your description:
+
+• assumptions of the null hypothesis
+• test statistic
+• p-value
+• reject or fail to reject the null hypothesis
+
+It is important to be able to determine if our model is a solid representation of the processes that we are studying. To do this we perform signficance testing on the goodness of fit for our models. If we fail to reject our null hypothesis then we can reasonably assume our model does a good enough job explaining the relationships we are seeing in the real world. However, if our model ends up rejecting the null hypothesis then we know it does not do a sufficient job of explaining the processes we are observing. In order to run this hypothesis test thought we have to simulate the distribution of our test statistic by simulating new data sets and. Once we calculate the distribution of our test statitic we can acutally calculate a p-value which shows us the probability that our originals model test statistic will fall within that distribution. If our calcuated p-value returns a value smaller than 0.05 we can assume that our original model does not do a good job of simulating our dataset. It is imporant to remember that our null hypothesis is the assumption that our fitted model is the data generating model.
+
+# Question 12
+Interpret the coefficient Beta1
+
+Beta1 is the difference between levels 'b' and 'a'.
+
+# Question 13
+How does the response variable change in response to a 1-unit change in x2?
+
+The response variable changes Beta2 units for every 1-unit increase in x2 when X3 = 0.
